@@ -118,7 +118,10 @@ class ProductCard extends StatelessWidget {
                       const SizedBox(width: 2),
                       Text('${product.rating}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                       const SizedBox(width: 4),
-                      Text('(${product.terjual} terjual)', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      Expanded(
+                        child: Text('(${product.terjual} terjual)',
+                            maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      ),
                     ],
                   ),
                 ],
