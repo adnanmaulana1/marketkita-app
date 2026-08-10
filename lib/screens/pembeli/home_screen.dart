@@ -630,16 +630,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(p.nama, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 3),
+                  SizedBox(
+                    height: 28,
+                    child: Text(p.nama, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, height: 1.25)),
+                  ),
+                  const SizedBox(height: 4),
                   Text(rupiah(p.harga), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
                   Text(rupiah(p.hargaCoret ?? p.harga),
                       style: TextStyle(fontSize: 9, color: Colors.grey[400], decoration: TextDecoration.lineThrough)),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
