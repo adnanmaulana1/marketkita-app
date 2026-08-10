@@ -1,0 +1,29 @@
+workflows:
+  android-workflow:
+    name: Android Build (MarketKita)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Build APK release
+        script: |
+          set -e
+          API_URL="${API_BASE_URL:-https://toko.adnanmaulana.my.id}"
+          flutter build apk --release --dart-define=API_BASE_URL=$API_URL
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
+    publishing:
+      email:
+        recipients:
+          - ${CM_EMAIL}
