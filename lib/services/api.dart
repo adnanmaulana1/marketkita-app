@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
+import '../models/banner.dart';
 import '../models/cart.dart';
 import '../models/chat.dart';
 import '../models/order.dart';
@@ -146,6 +147,12 @@ class Api {
   static Future<void> logout() async => clearToken();
 
   // ===== KATALOG =====
+  static Future<List<BannerItem>> banners() async {
+    final res = await http.get(_uri('/api/banners'), headers: _headers());
+    final d = _check(res);
+    return (d['banners'] as List).map((e) => BannerItem.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   static Future<List<Category>> categories() async {
     final res = await http.get(_uri('/api/categories'), headers: _headers());
     final d = _check(res);

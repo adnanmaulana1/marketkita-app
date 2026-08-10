@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config.dart';
+import '../../models/banner.dart';
 import '../../models/product.dart';
 import '../../services/api.dart';
 import '../../state/app_state.dart';
@@ -40,11 +42,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _flashTimer;
   Duration _flashRemaining = Duration.zero;
 
-  static const _banners = [
+  static const _fallbackBanners = [
     (title: 'Gratis Ongkir', subtitle: 'Kirim ke seluruh Polewali & sekitarnya', icon: Icons.local_shipping_outlined),
     (title: 'Flash Sale', subtitle: 'Hemat sampai 50% produk pilihan', icon: Icons.flash_on_outlined),
     (title: 'Top Up Dompet', subtitle: 'Isi saldo MarketKita, bayar lebih mudah', icon: Icons.account_balance_wallet_outlined),
   ];
+
+  List<BannerItem> _banners = [];
 
   @override
   void initState() {
@@ -55,14 +59,16 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
     _bannerTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (_bannerController.hasClients) {
-        final next = (_bannerIndex + 1) % _banners.length;
+      if (_bannerController.hasClients && _bannerCount > 0) {
+        final next = (_bannerIndex + 1) % _bannerCount;
         _bannerController.animateToPage(next, duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
       }
     });
     _startFlashTimer();
     _load();
   }
+
+  int get _bannerCount => _banners.isNotEmpty ? _banners.length : _fallbackBanners.length;
 
   @override
   void dispose() {
@@ -95,8 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_cats.isEmpty) {
         _cats = await Api.categories();
       }
+      final banners = await Api.banners();
       final res = await Api.products(kategori: _cat, q: _q, sort: _sort, page: 1);
       setState(() {
+        _banners = banners.where((b) => AppConfig.resolveUrl(b.gambarUrl).isNotEmpty).toList();
         _products = res.products;
         _pages = res.pages;
         _page = 1;
@@ -332,14 +340,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _bannerCarousel() {
+    final server = _banners;
+    final count = _bannerCount;
     return SizedBox(
       height: 150,
       child: PageView.builder(
         controller: _bannerController,
-        itemCount: _banners.length,
+        itemCount: count,
         onPageChanged: (i) => setState(() => _bannerIndex = i),
         itemBuilder: (_, i) {
-          final b = _banners[i];
+          if (server.isNotEmpty) {
+            final b = server[i];
+            return _serverBannerCard(b);
+          }
+          final f = _fallbackBanners[i];
           return InkWell(
             onTap: i == 2 ? () => setState(() => _tab = 3) : null,
             borderRadius: BorderRadius.circular(16),
@@ -362,15 +376,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(b.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          Text(f.title, maxLines: 2, overflow: TextOverflow.ellipsis,
                               style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 6),
-                          Text(b.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          Text(f.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
                               style: const TextStyle(color: Colors.white70, fontSize: 13)),
                         ],
                       ),
                     ),
-                    Icon(b.icon, color: Colors.white24, size: 72),
+                    Icon(f.icon, color: Colors.white24, size: 72),
                   ],
                 ),
               ),
@@ -381,10 +395,76 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _serverBannerCard(BannerItem b) {
+    final url = AppConfig.resolveUrl(b.gambarUrl);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            memCacheWidth: 800,
+            placeholder: (_, _) => Container(color: Colors.grey.shade200, child: const Icon(Icons.image, color: Colors.grey, size: 36)),
+            errorWidget: (_, _, _) => Container(
+              color: Colors.grey.shade200,
+              child: const Icon(Icons.image, color: Colors.grey, size: 36),
+            ),
+          ),
+          if (b.judul.isNotEmpty || b.subtitle.isNotEmpty)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withValues(alpha: 0.05), Colors.black.withValues(alpha: 0.65)],
+                ),
+              ),
+            ),
+          if (b.judul.isNotEmpty || b.subtitle.isNotEmpty)
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (b.badge.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)),
+                      child: Text(b.badge.split(' ').skip(1).join(' '),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                    ),
+                  const SizedBox(height: 6),
+                  Text(b.judul, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800, height: 1.2)),
+                  if (b.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(b.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11)),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _bannerDots() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_banners.length, (i) {
+      children: List.generate(_bannerCount, (i) {
         final active = i == _bannerIndex;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
