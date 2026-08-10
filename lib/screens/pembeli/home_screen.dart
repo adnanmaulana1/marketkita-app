@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
   List<Category> _cats = [];
   List<Product> _products = [];
+  List<Product> _flashProducts = [];
   int _page = 1;
   int _pages = 1;
   String _q = '';
@@ -63,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
     _load();
+    _loadFlashProducts();
   }
 
   int get _bannerCount => _banners.isNotEmpty ? _banners.length : _fallbackBanners.length;
@@ -96,6 +98,16 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadFlashProducts() async {
+    try {
+      final res = await Api.products(kategori: '', q: '', sort: _sort, page: 1);
+      if (!mounted) return;
+      setState(() {
+        _flashProducts = res.products.where((p) => p.hasDiskon).take(8).toList();
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadMore() async {
@@ -528,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _flashSale() {
-    final items = _products.where((p) => p.hasDiskon).take(8).toList();
+    final items = _flashProducts;
     if (items.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
