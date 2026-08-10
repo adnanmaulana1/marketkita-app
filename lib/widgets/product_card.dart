@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,7 +18,7 @@ class ProductCard extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id)),
+        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id, initialProduct: product)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -37,12 +38,17 @@ class ProductCard extends StatelessWidget {
                   if (product.gambarUrl.isEmpty)
                     Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey, size: 40))
                   else
-                    Image.network(
-                      product.gambarUrl.first,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image, color: Colors.grey, size: 40),
+                    Hero(
+                      tag: 'product-image-${product.id}',
+                      child: CachedNetworkImage(
+                        imageUrl: product.gambarUrl.first,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 400,
+                        placeholder: (_, _) => Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey, size: 40)),
+                        errorWidget: (_, _, _) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.image, color: Colors.grey, size: 40),
+                        ),
                       ),
                     ),
                   if (product.hasDiskon)

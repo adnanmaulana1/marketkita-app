@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,7 +10,8 @@ import 'checkout_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
-  const ProductDetailScreen({super.key, required this.productId});
+  final Product? initialProduct;
+  const ProductDetailScreen({super.key, required this.productId, this.initialProduct});
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -20,28 +22,40 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _loading = true;
   int _qty = 1;
   String _varian = '';
-  int _currentImage = 0;
   bool _actionLoading = false;
   bool _favLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.initialProduct != null) {
+      _product = widget.initialProduct;
+      _loading = false;
+      _load(silent: true);
+    } else {
+      _load();
+    }
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool silent = false}) async {
     try {
       final p = await Api.productDetail(widget.productId);
+      if (!mounted) return;
+      for (final u in p.gambarUrl) {
+        try {
+          await precacheImage(CachedNetworkImageProvider(u), context);
+        } catch (_) {}
+      }
       setState(() {
         _product = p;
         _loading = false;
       });
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (!silent) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-        setState(() => _loading = false);
       }
+      setState(() => _loading = false);
     }
   }
 
@@ -113,13 +127,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const _DetailSkeleton();
-    }
-    final p = _product!;
-    final varianKeys = p.varian.keys.toList();
+    final showSkeleton = _loading && _product == null;
+    final p = _product;
     final app = context.watch<AppState>();
-    final isFav = app.favoritIds.contains(p.id);
+    final isFav = p != null && app.favoritIds.contains(p.id);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -127,128 +138,90 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        title: Text(p.nama, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        title: p == null
+            ? null
+            : Text(p.nama, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         actions: [
-          IconButton(
-            icon: _favLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : Icon(isFav ? Icons.favorite : Icons.favorite_border, color: isFav ? Colors.red : Colors.black87),
-            onPressed: _toggleFavorit,
-          ),
+          if (p != null)
+            IconButton(
+              icon: _favLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(isFav ? Icons.favorite : Icons.favorite_border, color: isFav ? Colors.red : Colors.black87),
+              onPressed: _toggleFavorit,
+            ),
           const SizedBox(width: 4),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 110),
-        children: [
-          _gallery(p),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _priceBlock(p),
-                const SizedBox(height: 16),
-                _metaRow(p),
-                if (varianKeys.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  for (final key in varianKeys) ...[
-                    Text(key, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: (p.varian[key] as List).map<Widget>((val) {
-                        final selected = _varian == val.toString();
-                        return _varianChip(val.toString(), selected);
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ],
-                _qtyRow(),
-                const SizedBox(height: 20),
-                _descriptionCard(p),
-                if (p.toko.nama.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _storeCard(p),
-                ],
-              ],
-            ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, anim) => FadeTransition(
+          opacity: anim,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.03), end: Offset.zero).animate(anim),
+            child: child,
           ),
-        ],
+        ),
+        child: showSkeleton ? const _DetailSkeleton(key: ValueKey('skeleton')) : _body(p!),
       ),
-      bottomNavigationBar: _bottomBar(p),
+      bottomNavigationBar: showSkeleton
+          ? null
+          : TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              builder: (context, v, child) => Opacity(
+                opacity: v,
+                child: Transform.translate(offset: Offset(0, 18 * (1 - v)), child: child),
+              ),
+              child: _bottomBar(p!),
+            ),
     );
   }
 
-  Widget _gallery(Product p) {
-    final hasImages = p.gambarUrl.isNotEmpty;
-    return Column(
+  Widget _body(Product p) {
+    final varianKeys = p.varian.keys.toList();
+    return ListView(
+      key: const ValueKey('body'),
+      padding: const EdgeInsets.only(bottom: 110),
+      physics: const BouncingScrollPhysics(),
       children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          height: 300,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            fit: StackFit.expand,
+        _GallerySection(product: p),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!hasImages)
-                Container(color: Colors.grey[100], child: const Icon(Icons.image, size: 64, color: Colors.grey))
-              else
-                PageView.builder(
-                  itemCount: p.gambarUrl.length,
-                  onPageChanged: (i) => setState(() => _currentImage = i),
-                  itemBuilder: (_, i) => Image.network(
-                    p.gambarUrl[i],
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      color: Colors.grey[100],
-                      child: const Icon(Icons.image, size: 64, color: Colors.grey),
-                    ),
+              _priceBlock(p),
+              const SizedBox(height: 16),
+              _metaRow(p),
+              if (varianKeys.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                for (final key in varianKeys) ...[
+                  Text(key, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (p.varian[key] as List).map<Widget>((val) {
+                      final selected = _varian == val.toString();
+                      return _varianChip(val.toString(), selected);
+                    }).toList(),
                   ),
-                ),
-              if (p.hasDiskon)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text('-${p.diskonPersen}%', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-                  ),
-                ),
+                  const SizedBox(height: 16),
+                ],
+              ],
+              _qtyRow(),
+              const SizedBox(height: 20),
+              _descriptionCard(p),
+              if (p.toko.nama.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _storeCard(p),
+              ],
             ],
           ),
         ),
-        if (hasImages && p.gambarUrl.length > 1)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(p.gambarUrl.length, (i) {
-                final active = i == _currentImage;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: active ? 18 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: active ? Colors.black : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
-            ),
-          ),
       ],
     );
   }
@@ -582,21 +555,156 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 }
 
-class _DetailSkeleton extends StatelessWidget {
-  const _DetailSkeleton();
+class _GallerySection extends StatefulWidget {
+  final Product product;
+  const _GallerySection({required this.product});
+
+  @override
+  State<_GallerySection> createState() => _GallerySectionState();
+}
+
+class _GallerySectionState extends State<_GallerySection> {
+  final PageController _controller = PageController();
+  int _current = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final base = Colors.grey.shade200;
-    Widget box(double w, double h, {double radius = 8}) => Container(
+    final imgs = widget.product.gambarUrl;
+    final hasImages = imgs.isNotEmpty;
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          height: 300,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (!hasImages)
+                Container(color: Colors.grey[100], child: const Icon(Icons.image, size: 64, color: Colors.grey))
+              else
+                RepaintBoundary(
+                  child: PageView.builder(
+                    controller: _controller,
+                    itemCount: imgs.length,
+                    allowImplicitScrolling: true,
+                    onPageChanged: (i) => setState(() => _current = i),
+                    itemBuilder: (_, i) => _networkImage(i, imgs[i]),
+                  ),
+                ),
+              if (widget.product.hasDiskon)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: 1,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('-${widget.product.diskonPersen}%',
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (hasImages && imgs.length > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(imgs.length, (i) {
+                final active = i == _current;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: active ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: active ? const Color(0xFF03AC0E) : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _networkImage(int index, String url) {
+    final img = CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      fadeInDuration: const Duration(milliseconds: 250),
+      placeholder: (_, _) => Container(color: Colors.grey[100], child: const Icon(Icons.image, size: 40, color: Colors.grey)),
+      errorWidget: (_, _, _) => Container(color: Colors.grey[100], child: const Icon(Icons.image, size: 40, color: Colors.grey)),
+    );
+    if (index == 0) {
+      return Hero(tag: 'product-image-${widget.product.id}', child: img);
+    }
+    return img;
+  }
+}
+
+class _DetailSkeleton extends StatefulWidget {
+  const _DetailSkeleton({super.key});
+
+  @override
+  State<_DetailSkeleton> createState() => _DetailSkeletonState();
+}
+
+class _DetailSkeletonState extends State<_DetailSkeleton> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Widget box(double w, double h, {double radius = 8}) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value;
+        return Container(
           width: w,
           height: h,
           decoration: BoxDecoration(
-            color: base,
             borderRadius: BorderRadius.circular(radius),
+            gradient: LinearGradient(
+              colors: const [Color(0xFFE6E6E6), Color(0xFFF8F8F8), Color(0xFFE6E6E6)],
+              stops: const [0.1, 0.5, 0.9],
+              begin: Alignment(-1.2 + 2.4 * t, 0),
+              end: Alignment(0.2 + 2.4 * t, 0),
+            ),
           ),
         );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      key: const ValueKey('skeleton'),
       backgroundColor: Colors.grey[50],
       appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
       body: SingleChildScrollView(
@@ -607,8 +715,11 @@ class _DetailSkeleton extends StatelessWidget {
             Container(
               height: 300,
               decoration: BoxDecoration(
-                color: base,
                 borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: const [Color(0xFFE6E6E6), Color(0xFFF8F8F8), Color(0xFFE6E6E6)],
+                  stops: const [0.1, 0.5, 0.9],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -647,6 +758,10 @@ class _DetailSkeleton extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: box(double.infinity, 36, radius: 10),
               ),
             ),
           ],

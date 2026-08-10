@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -319,8 +320,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 4),
           _bannerCarousel(),
           _bannerDots(),
-          _categorySection(),
           _flashSale(),
+          _categorySection(),
           _productSectionHeader(),
           _feedPills(),
           _productGrid(),
@@ -546,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
       borderRadius: BorderRadius.circular(14),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: p.id)),
+        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: p.id, initialProduct: p)),
       ),
       child: Container(
         width: 120,
@@ -568,8 +569,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.grey[100],
                     child: p.gambarUrl.isEmpty
                         ? const Icon(Icons.image, color: Colors.grey, size: 34)
-                        : Image.network(p.gambarUrl.first, fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const Icon(Icons.image, color: Colors.grey, size: 34)),
+                        : CachedNetworkImage(
+                            imageUrl: p.gambarUrl.first,
+                            fit: BoxFit.cover,
+                            memCacheWidth: 240,
+                            placeholder: (_, _) => const Icon(Icons.image, color: Colors.grey, size: 34),
+                            errorWidget: (_, _, _) => const Icon(Icons.image, color: Colors.grey, size: 34),
+                          ),
                   ),
                   if (p.hasDiskon)
                     Positioned(

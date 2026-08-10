@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -60,9 +61,11 @@ class CartScreen extends StatelessWidget {
                           height: 72,
                           child: item.gambar.isEmpty
                               ? Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))
-                              : Image.network(item.gambar, fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => Container(
-                                      color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))),
+                              : CachedNetworkImage(
+                                  imageUrl: item.gambar,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, _) => Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey)),
+                                  errorWidget: (_, _, _) => Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))),
                         ),
                       ),
                       const SizedBox(width: 12),
