@@ -24,6 +24,15 @@ class MarketKitaApp extends StatelessWidget {
       child: MaterialApp(
         title: 'MarketKita',
         debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          return MediaQuery(
+            data: mq.copyWith(
+              textScaler: mq.textScaler.clamp(minScaleFactor: 1.0, maxScaleFactor: 1.1),
+            ),
+            child: child!,
+          );
+        },
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF171717)),
