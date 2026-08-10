@@ -154,100 +154,94 @@ class _HomeScreenState extends State<HomeScreen> {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      toolbarHeight: 100,
       titleSpacing: 0,
       title: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
           children: [
-            Row(
-              children: [
-                const Icon(Icons.location_on_outlined, size: 16, color: Colors.black87),
-                const SizedBox(width: 4),
-                const Text('Kirim ke Polewali',
-                    style: TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w600)),
-                const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
-                const Spacer(),
-                IconButton(
-                  icon: Badge(
-                    isLabelVisible: chatUnread > 0,
-                    backgroundColor: Colors.black,
-                    label: Text('$chatUnread'),
-                    child: const Icon(Icons.chat_bubble_outline, color: Colors.black87),
-                  ),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ChatListScreen()),
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                ),
-                const SizedBox(width: 6),
-                IconButton(
-                  icon: Badge(
-                    isLabelVisible: cartCount > 0,
-                    backgroundColor: Colors.black,
-                    label: Text('$cartCount'),
-                    child: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
-                  ),
-                  onPressed: () => setState(() => _tab = 1),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: TextField(
-                      onSubmitted: _search,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'Cari di MarketKita',
-                        hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                        prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 22),
-                        suffixIcon: _q.isEmpty
-                            ? null
-                            : IconButton(
-                                icon: const Icon(Icons.close, size: 18),
-                                onPressed: () {
-                                  _q = '';
-                                  _load();
-                                },
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune, color: Colors.white, size: 20),
-                    onPressed: _openSortSheet,
-                  ),
-                ),
-              ],
-            ),
+            const Icon(Icons.location_on_outlined, size: 18, color: Colors.black87),
+            const SizedBox(width: 4),
+            const Text('Kirim ke Polewali',
+                style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600)),
+            const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
           ],
         ),
+      ),
+      actions: [
+        IconButton(
+          icon: Badge(
+            isLabelVisible: chatUnread > 0,
+            backgroundColor: Colors.black,
+            label: Text('$chatUnread'),
+            child: const Icon(Icons.chat_bubble_outline, color: Colors.black87),
+          ),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatListScreen()),
+          ),
+        ),
+        IconButton(
+          icon: Badge(
+            isLabelVisible: cartCount > 0,
+            backgroundColor: Colors.black,
+            label: Text('$cartCount'),
+            child: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
+          ),
+          onPressed: () => setState(() => _tab = 1),
+        ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+
+  Widget _searchRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              onSubmitted: _search,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Cari di MarketKita',
+                hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                filled: true,
+                fillColor: Colors.white,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 22),
+                suffixIcon: _q.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () {
+                          _q = '';
+                          _load();
+                        },
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
+            child: IconButton(
+              icon: const Icon(Icons.tune, color: Colors.white, size: 20),
+              onPressed: _openSortSheet,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -269,6 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ..._sortOptions.map((s) {
               final active = _sort == s.$1;
               return ListTile(
+                tileColor: Colors.white,
                 leading: Icon(active ? Icons.radio_button_checked : Icons.radio_button_off,
                     color: active ? Colors.black : Colors.grey),
                 title: Text(s.$2, style: TextStyle(fontWeight: active ? FontWeight.w700 : FontWeight.w400)),
@@ -297,7 +292,8 @@ class _HomeScreenState extends State<HomeScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          const SizedBox(height: 8),
+          _searchRow(),
+          const SizedBox(height: 4),
           _bannerCarousel(),
           _bannerDots(),
           _categorySection(),

@@ -120,6 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   ListTile(
+                    tileColor: Colors.white,
                     leading: const Icon(Icons.wallet_outlined),
                     title: const Text('Saldo Dompet'),
                     trailing: Text(rupiah(u.saldo), style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -137,6 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1),
                   ListTile(
+                    tileColor: Colors.white,
                     leading: const Icon(Icons.confirmation_number_outlined),
                     title: const Text('Voucher Saya'),
                     trailing: const Icon(Icons.chevron_right),
@@ -144,6 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1),
                   ListTile(
+                    tileColor: Colors.white,
                     leading: const Icon(Icons.logout),
                     title: const Text('Keluar', style: TextStyle(color: Colors.red)),
                     onTap: _logout,
