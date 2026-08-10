@@ -19,6 +19,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _editLoading = false;
 
   Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Keluar'),
+        content: const Text('Yakin ingin keluar dari akun ini?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
     final app = context.read<AppState>();
     await app.logout();
     if (!mounted) return;
