@@ -23,7 +23,3 @@ workflows:
           flutter build apk --release --dart-define=API_BASE_URL=$API_URL
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-    publishing:
-      email:
-        recipients:
-          - ${CM_EMAIL}
