@@ -11,30 +11,32 @@ class ProductCard extends StatelessWidget {
   final Product product;
   const ProductCard({super.key, required this.product});
 
+  /// Tinggi tetap kartu agar semua grid memakai ukuran seragam (tidak miring).
+  static const double cardHeight = 304;
+
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final isFav = app.favoritIds.contains(product.id);
-    return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id, initialProduct: product)),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id, initialProduct: product)),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 150,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 150,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
                   if (product.gambarUrl.isEmpty)
                     Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey, size: 40))
                   else
@@ -67,31 +69,37 @@ class ProductCard extends StatelessWidget {
                   Positioned(
                     top: 6,
                     right: 6,
-                    child: InkWell(
-                      onTap: () async {
-                        if (!app.isLoggedIn) {
-                          Navigator.pushNamed(context, '/login');
-                          return;
-                        }
-                        final fav = await app.toggleFavorite(product.id);
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text(fav ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit'),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: Icon(
-                          isFav ? Icons.favorite : Icons.favorite_border,
-                          size: 18,
-                          color: isFav ? Colors.red : Colors.grey,
+                    // Selector: rebuild hanya saat status favorit produk ini
+                    // berubah, bukan pada setiap notifyListeners.
+                    child: Selector<AppState, bool>(
+                      selector: (_, app) => app.favoritIds.contains(product.id),
+                      builder: (context, isFav, _) => InkWell(
+                        onTap: () async {
+                          final app = context.read<AppState>();
+                          if (!app.isLoggedIn) {
+                            Navigator.pushNamed(context, '/login');
+                            return;
+                          }
+                          final fav = await app.toggleFavorite(product.id);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(
+                                content: Text(fav ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit'),
+                                duration: const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: Icon(
+                            isFav ? Icons.favorite : Icons.favorite_border,
+                            size: 18,
+                            color: isFav ? Colors.red : Colors.grey,
+                          ),
                         ),
                       ),
                     ),
@@ -167,6 +175,7 @@ class ProductCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/alamat_kirim.dart';
 import '../models/cart.dart';
 import '../models/user.dart';
+import '../services/alamat_service.dart';
 import '../services/api.dart';
 import '../services/ws_service.dart';
 
@@ -13,6 +15,8 @@ class AppState extends ChangeNotifier {
   int _kurirOrderBaru = 0;
   final Set<int> _favoritIds = {};
   final List<void Function(Map<String, dynamic>)> _realtimeListeners = [];
+  List<AlamatKirim> _alamatList = [];
+  AlamatKirim? _alamatAktif;
 
   User? get user => _user;
   Cart? get cart => _cart;
@@ -20,6 +24,8 @@ class AppState extends ChangeNotifier {
   int get chatUnread => _chatUnread;
   int get kurirOrderBaru => _kurirOrderBaru;
   Set<int> get favoritIds => _favoritIds;
+  List<AlamatKirim> get alamatList => _alamatList;
+  AlamatKirim? get alamatAktif => _alamatAktif;
 
   bool get isLoggedIn => _user != null;
 
@@ -65,6 +71,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> load() async {
     await Api.init();
+    await loadAlamat();
     final token = Api.token;
     if (token == null) {
       notifyListeners();
@@ -172,6 +179,52 @@ class AppState extends ChangeNotifier {
   Future<void> refreshUser() async {
     if (!isLoggedIn) return;
     _user = await Api.me();
+    notifyListeners();
+  }
+
+  /// Muat daftar alamat kirim dari perangkat.
+  Future<void> loadAlamat() async {
+    _alamatList = await AlamatService.list();
+    final aktifId = await AlamatService.aktifId();
+    _alamatAktif = null;
+    for (final a in _alamatList) {
+      if (a.id == aktifId) {
+        _alamatAktif = a;
+        break;
+      }
+    }
+    if (_alamatAktif == null && _alamatList.isNotEmpty) {
+      _alamatAktif = _alamatList.first;
+    }
+    notifyListeners();
+  }
+
+  /// Simpan alamat baru/perubahan lalu jadikan alamat aktif.
+  Future<void> saveAlamat(AlamatKirim a) async {
+    await AlamatService.save(a);
+    await AlamatService.setAktifId(a.id);
+    _alamatList = await AlamatService.list();
+    _alamatAktif = a;
+    notifyListeners();
+  }
+
+  /// Pilih alamat yang dipakai untuk pengiriman.
+  Future<void> setAlamatAktif(AlamatKirim a) async {
+    await AlamatService.setAktifId(a.id);
+    _alamatAktif = a;
+    notifyListeners();
+  }
+
+  /// Hapus alamat; bila yang aktif dihapus, fallback ke alamat pertama.
+  Future<void> hapusAlamat(int id) async {
+    await AlamatService.delete(id);
+    _alamatList = await AlamatService.list();
+    if (_alamatAktif?.id == id) {
+      _alamatAktif = _alamatList.isNotEmpty ? _alamatList.first : null;
+      if (_alamatAktif != null) {
+        await AlamatService.setAktifId(_alamatAktif!.id);
+      }
+    }
     notifyListeners();
   }
 

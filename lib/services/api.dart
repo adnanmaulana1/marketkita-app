@@ -165,6 +165,7 @@ class Api {
     String toko = '',
     String sort = '',
     int page = 1,
+    int perPage = 20,
   }) async {
     final res = await http.get(
       _uri('/api/products', {
@@ -173,6 +174,7 @@ class Api {
         if (toko.isNotEmpty) 'toko': toko,
         if (sort.isNotEmpty) 'sort': sort,
         'page': '$page',
+        'per_page': '$perPage',
       }),
       headers: _headers(),
     );

@@ -135,10 +135,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-
     return Scaffold(
-      appBar: _tab == 0 ? _homeAppBar(app) : null,
+      appBar: _tab == 0 ? _homeAppBar() : null,
       body: IndexedStack(
         index: _tab,
         children: [
@@ -163,9 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  PreferredSizeWidget _homeAppBar(AppState app) {
-    final cartCount = app.cart?.count ?? 0;
-    final chatUnread = app.chatUnread;
+  PreferredSizeWidget _homeAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
@@ -183,26 +179,38 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       actions: [
-        IconButton(
-          icon: Badge(
-            isLabelVisible: chatUnread > 0,
-            backgroundColor: Colors.black,
-            label: Text('$chatUnread'),
-            child: const Icon(Icons.chat_bubble_outline, color: Colors.black87),
-          ),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ChatListScreen()),
-          ),
+        // Isolasi: hanya badge chat yang rebuild saat unread berubah.
+        Consumer<AppState>(
+          builder: (_, app, _) {
+            final chatUnread = app.chatUnread;
+            return IconButton(
+              icon: Badge(
+                isLabelVisible: chatUnread > 0,
+                backgroundColor: Colors.black,
+                label: Text('$chatUnread'),
+                child: const Icon(Icons.chat_bubble_outline, color: Colors.black87),
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatListScreen()),
+              ),
+            );
+          },
         ),
-        IconButton(
-          icon: Badge(
-            isLabelVisible: cartCount > 0,
-            backgroundColor: Colors.black,
-            label: Text('$cartCount'),
-            child: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
-          ),
-          onPressed: () => setState(() => _tab = 1),
+        // Isolasi: hanya badge keranjang yang rebuild saat count berubah.
+        Consumer<AppState>(
+          builder: (_, app, _) {
+            final cartCount = app.cart?.count ?? 0;
+            return IconButton(
+              icon: Badge(
+                isLabelVisible: cartCount > 0,
+                backgroundColor: Colors.black,
+                label: Text('$cartCount'),
+                child: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
+              ),
+              onPressed: () => setState(() => _tab = 1),
+            );
+          },
         ),
         const SizedBox(width: 4),
       ],
@@ -252,56 +260,61 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _walletBar() {
-    final app = context.watch<AppState>();
-    final saldo = app.user?.saldo ?? 0;
-    final name = app.user?.nama ?? '';
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-            child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 20),
+    // Isolasi: hanya kartu saldo yang rebuild saat saldo/nama berubah,
+    // bukan seluruh home body.
+    return Selector<AppState, (int, String)>(
+      selector: (_, app) => (app.user?.saldo ?? 0, app.user?.nama ?? ''),
+      builder: (_, data, _) {
+        final (saldo, name) = data;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Saldo Dompet', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                const SizedBox(height: 2),
-                Text(rupiah(saldo), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-              ],
-            ),
-          ),
-          if (name.isNotEmpty)
-            Flexible(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.verified, color: Colors.black, size: 14),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                    ),
+                    Text('Saldo Dompet', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                    const SizedBox(height: 2),
+                    Text(rupiah(saldo), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
                   ],
                 ),
               ),
-            ),
-        ],
-      ),
+              if (name.isNotEmpty)
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.verified, color: Colors.black, size: 14),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -319,13 +332,13 @@ class _HomeScreenState extends State<HomeScreen> {
           _searchRow(),
           _walletBar(),
           const SizedBox(height: 4),
-          _bannerCarousel(),
-          _bannerDots(),
-          _flashSale(),
-          _categorySection(),
-          _productSectionHeader(),
-          _feedPills(),
-          _productGrid(),
+          RepaintBoundary(child: _bannerCarousel()),
+          RepaintBoundary(child: _bannerDots()),
+          RepaintBoundary(child: _flashSale()),
+          RepaintBoundary(child: _categorySection()),
+          RepaintBoundary(child: _productSectionHeader()),
+          RepaintBoundary(child: _feedPills()),
+          RepaintBoundary(child: _productGrid()),
           if (_loadingMore) const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
         ],
       ),

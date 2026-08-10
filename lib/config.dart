@@ -11,4 +11,15 @@ class AppConfig {
     if (path.startsWith('/')) return '$baseUrl$path';
     return '$baseUrl/$path';
   }
+
+  /// Melengkapi path relatif dari API (mis. "/static/products/x.jpg")
+  /// menjadi URL absolut terhadap [baseUrl]. URL yang sudah punya skema
+  /// (http/https) dikembalikan apa adanya.
+  static String resolveImageUrl(String url) {
+    if (url.isEmpty) return url;
+    final u = Uri.tryParse(url);
+    if (u == null || u.hasScheme) return url;
+    final prefix = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
+    return prefix + (url.startsWith('/') ? url.substring(1) : url);
+  }
 }
