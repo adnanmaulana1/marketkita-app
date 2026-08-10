@@ -335,9 +335,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(b.title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                        Text(b.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 6),
-                        Text(b.subtitle, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        Text(b.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -561,18 +563,20 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.72,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardW = (constraints.maxWidth - 12) / 2;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              for (final p in _products) SizedBox(width: cardW, child: ProductCard(product: p)),
+            ],
+          );
+        },
       ),
-      itemCount: _products.length,
-      itemBuilder: (_, i) => ProductCard(product: _products[i]),
     );
   }
 
