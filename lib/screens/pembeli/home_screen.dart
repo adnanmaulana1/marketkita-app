@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      toolbarHeight: 96,
+      toolbarHeight: 100,
       titleSpacing: 0,
       title: Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
