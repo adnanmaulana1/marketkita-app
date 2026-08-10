@@ -51,7 +51,7 @@ class ProductCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade600,
+                        color: Colors.black,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text('-${product.diskonPersen}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
@@ -63,7 +63,17 @@ class ProductCard extends StatelessWidget {
                     child: InkWell(
                       onTap: () async {
                         if (!app.isLoggedIn) return;
-                        await app.toggleFavorite(product.id);
+                        final fav = await app.toggleFavorite(product.id);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(fav ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit'),
+                              duration: const Duration(seconds: 1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                       },
                       child: Container(
                         padding: const EdgeInsets.all(6),
@@ -90,6 +100,11 @@ class ProductCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.2),
                   ),
                   const SizedBox(height: 6),
+                  if (product.toko.nama.isNotEmpty) ...[
+                    Text(product.toko.nama,
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                    const SizedBox(height: 2),
+                  ],
                   Text(rupiah(product.harga), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
                   if (product.hasDiskon)
                     Text(rupiah(product.hargaCoret),
@@ -97,11 +112,11 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.star, size: 14, color: Colors.amber),
+                      const Icon(Icons.star, size: 13, color: Colors.amber),
                       const SizedBox(width: 2),
                       Text('${product.rating}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                       const SizedBox(width: 4),
-                      Text('(${product.terjual})', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      Text('(${product.terjual} terjual)', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                     ],
                   ),
                 ],

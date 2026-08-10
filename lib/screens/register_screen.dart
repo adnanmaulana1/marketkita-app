@@ -18,8 +18,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _email = TextEditingController();
   final _telepon = TextEditingController();
   final _password = TextEditingController();
-  final _namaToko = TextEditingController();
-  final _kendaraan = TextEditingController();
   String _role = 'pembeli';
   bool _obscure = true;
   String? _error;
@@ -34,19 +32,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _email.text.trim(),
         telepon: _telepon.text.trim(),
         password: _password.text,
-        role: _role,
-        namaToko: _namaToko.text.trim(),
-        kendaraan: _kendaraan.text.trim(),
       );
       if (!mounted) return;
-      final role = app.user!.role;
-      if (role == 'kurir') {
-        Navigator.pushReplacementNamed(context, '/kurir');
-      } else if (role == 'toko') {
-        Navigator.pushReplacementNamed(context, '/toko');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      Navigator.pushReplacementNamed(context, '/home');
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
@@ -56,8 +44,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isToko = _role == 'toko';
-    final isKurir = _role == 'kurir';
     return Scaffold(
       appBar: AppBar(title: const Text('Daftar Akun')),
       body: SafeArea(
@@ -86,7 +72,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ButtonSegment(value: 'kurir', label: Text('Kurir'), icon: Icon(Icons.two_wheeler_outlined)),
                       ],
                       selected: {_role},
-                      onSelectionChanged: (s) => setState(() => _role = s.first),
+                      onSelectionChanged: (s) {
+                        if (s.first != 'pembeli') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Aplikasi untuk Toko/Kurir terpisah. Silakan unduh aplikasi khusus.'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          return;
+                        }
+                        setState(() => _role = 'pembeli');
+                      },
                     ),
                     const SizedBox(height: 20),
                     if (_error != null) ...[
@@ -120,27 +117,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: const InputDecoration(labelText: 'Telepon', prefixIcon: Icon(Icons.phone_outlined), border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
-                    if (isToko) ...[
-                      TextFormField(
-                        controller: _namaToko,
-                        decoration: const InputDecoration(labelText: 'Nama Toko', prefixIcon: Icon(Icons.storefront_outlined), border: OutlineInputBorder()),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama toko wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (isKurir) ...[
-                      DropdownButtonFormField<String>(
-                        initialValue: _kendaraan.text.isEmpty ? 'motor' : _kendaraan.text,
-                        decoration: const InputDecoration(labelText: 'Kendaraan', prefixIcon: Icon(Icons.two_wheeler_outlined), border: OutlineInputBorder()),
-                        items: const [
-                          DropdownMenuItem(value: 'motor', child: Text('Motor')),
-                          DropdownMenuItem(value: 'mobil', child: Text('Mobil')),
-                          DropdownMenuItem(value: 'pickup', child: Text('Pickup')),
-                        ],
-                        onChanged: (v) => _kendaraan.text = v ?? 'motor',
-                      ),
-                      const SizedBox(height: 12),
-                    ],
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,

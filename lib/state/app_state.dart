@@ -110,9 +110,6 @@ class AppState extends ChangeNotifier {
     required String email,
     required String telepon,
     required String password,
-    required String role,
-    String namaToko = '',
-    String kendaraan = '',
   }) async {
     _loading = true;
     notifyListeners();
@@ -122,13 +119,9 @@ class AppState extends ChangeNotifier {
         email: email,
         telepon: telepon,
         password: password,
-        role: role,
-        namaToko: namaToko,
-        kendaraan: kendaraan,
+        role: 'pembeli',
       );
-      if (role != 'toko' && role != 'kurir') {
-        _cart = await Api.cart();
-      }
+      _cart = await Api.cart();
       connectRealtime();
       await _refreshFavoritSilent();
     } finally {

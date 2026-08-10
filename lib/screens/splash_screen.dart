@@ -25,14 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (user == null) {
       Navigator.pushReplacementNamed(context, '/login');
     } else {
-      final role = user.role;
-      if (role == 'kurir') {
-        Navigator.pushReplacementNamed(context, '/kurir');
-      } else if (role == 'toko') {
-        Navigator.pushReplacementNamed(context, '/toko');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      Navigator.pushReplacementNamed(context, '/home');
     }
   }
 

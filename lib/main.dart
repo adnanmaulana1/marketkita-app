@@ -7,8 +7,6 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/pembeli/home_screen.dart';
-import 'screens/kurir/kurir_home_screen.dart';
-import 'screens/toko/toko_home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,8 +36,6 @@ class MarketKitaApp extends StatelessWidget {
           '/login': (_) => const LoginScreen(),
           '/register': (_) => const RegisterScreen(),
           '/home': (_) => const HomeScreen(),
-          '/kurir': (_) => const KurirHomeScreen(),
-          '/toko': (_) => const TokoHomeScreen(),
         },
       ),
     );

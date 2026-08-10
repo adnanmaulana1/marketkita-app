@@ -26,14 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await app.login(_email.text.trim(), _password.text);
       if (!mounted) return;
-      final role = app.user!.role;
-      if (role == 'kurir') {
-        Navigator.pushReplacementNamed(context, '/kurir');
-      } else if (role == 'toko') {
-        Navigator.pushReplacementNamed(context, '/toko');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      Navigator.pushReplacementNamed(context, '/home');
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
