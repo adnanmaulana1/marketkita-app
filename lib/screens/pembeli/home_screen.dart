@@ -39,8 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _bannerIndex = 0;
   final _bannerController = PageController();
   Timer? _bannerTimer;
-  Timer? _flashTimer;
-  Duration _flashRemaining = Duration.zero;
 
   static const _fallbackBanners = [
     (title: 'Gratis Ongkir', subtitle: 'Kirim ke seluruh Polewali & sekitarnya', icon: Icons.local_shipping_outlined),
@@ -64,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _bannerController.animateToPage(next, duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
       }
     });
-    _startFlashTimer();
     _load();
   }
 
@@ -73,25 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _bannerTimer?.cancel();
-    _flashTimer?.cancel();
     _bannerController.dispose();
     _scroll.dispose();
     super.dispose();
-  }
-
-  void _startFlashTimer() {
-    _flashRemaining = _untilMidnight();
-    _flashTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _flashRemaining = _untilMidnight());
-    });
-  }
-
-  Duration _untilMidnight() {
-    final now = DateTime.now();
-    final midnight = DateTime(now.year, now.month, now.day + 1);
-    final d = midnight.difference(now);
-    return d.isNegative ? Duration.zero : d;
   }
 
   Future<void> _load() async {
@@ -549,9 +530,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _flashSale() {
     final items = _products.where((p) => p.hasDiskon).take(8).toList();
     if (items.isEmpty) return const SizedBox.shrink();
-    final h = _flashRemaining.inHours.toString().padLeft(2, '0');
-    final m = _flashRemaining.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = _flashRemaining.inSeconds.remainder(60).toString().padLeft(2, '0');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -583,19 +561,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.timer_outlined, color: Colors.white70, size: 16),
-                  const SizedBox(width: 6),
-                  Text('Berakhir dalam', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
-                  const SizedBox(width: 8),
-                  _timerBox(h),
-                  const Text(':', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  _timerBox(m),
-                  const Text(':', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  _timerBox(s),
-                ],
-              ),
+              const _FlashCountdown(),
               const SizedBox(height: 10),
               SizedBox(
                 height: 205,
@@ -610,14 +576,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _timerBox(String txt) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)),
-      child: Text(txt, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 
@@ -797,5 +755,66 @@ class _HomeScreenState extends State<HomeScreen> {
     if (n.contains('jasa') || n.contains('service') || n.contains('perbaikan')) return Icons.handyman_outlined;
     if (n.contains('buku') || n.contains('tulis')) return Icons.menu_book_outlined;
     return Icons.category_outlined;
+  }
+}
+
+class _FlashCountdown extends StatefulWidget {
+  const _FlashCountdown();
+
+  @override
+  State<_FlashCountdown> createState() => _FlashCountdownState();
+}
+
+class _FlashCountdownState extends State<_FlashCountdown> {
+  Timer? _timer;
+
+  Duration _remaining() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    final d = midnight.difference(now);
+    return d.isNegative ? Duration.zero : d;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Widget _box(String txt) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(6)),
+      child: Text(txt, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _remaining();
+    final h = r.inHours.toString().padLeft(2, '0');
+    final m = r.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = r.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return Row(
+      children: [
+        const Icon(Icons.timer_outlined, color: Colors.white70, size: 16),
+        const SizedBox(width: 6),
+        Text('Berakhir dalam', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
+        const SizedBox(width: 8),
+        _box(h),
+        const Text(':', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        _box(m),
+        const Text(':', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        _box(s),
+      ],
+    );
   }
 }
