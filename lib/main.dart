@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'state/app_state.dart';
@@ -9,8 +10,9 @@ import 'screens/pembeli/home_screen.dart';
 import 'screens/kurir/kurir_home_screen.dart';
 import 'screens/toko/toko_home_screen.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID');
   runApp(const MarketKitaApp());
 }
 

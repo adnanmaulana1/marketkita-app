@@ -1,5 +1,6 @@
 class AppConfig {
   // Base URL backend MarketKita.
-  // Domain produksi sudah mengarah ke server (reverse proxy Cloudflare).
-  static const String baseUrl = 'http://toko.adnanmaulana.my.id';
+  // Wajib HTTPS: semua trafik (API + WebSocket) melewati TLS.
+  // WebSocket otomatis memakai wss:// selama scheme di sini https.
+  static const String baseUrl = 'https://toko.adnanmaulana.my.id';
 }

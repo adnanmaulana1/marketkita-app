@@ -6,6 +6,7 @@ import '../../models/product.dart';
 import '../../services/toko_api.dart';
 import '../../state/app_state.dart';
 import '../../utils/format.dart';
+import '../chat_list_screen.dart';
 
 class TokoHomeScreen extends StatefulWidget {
   const TokoHomeScreen({super.key});
@@ -51,10 +52,19 @@ class _TokoHomeScreenState extends State<TokoHomeScreen> {
         title: const Text('Dashboard Toko', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
+            icon: Badge(
+              isLabelVisible: app.chatUnread > 0,
+              label: Text('${app.chatUnread}'),
+              child: const Icon(Icons.chat_bubble_outline),
+            ),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen())),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await app.logout();
-              if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/login', (r) => false);
+              if (!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (r) => false);
             },
           ),
         ],
@@ -292,7 +302,7 @@ class _ProductRow extends StatelessWidget {
               child: product.gambarUrl.isEmpty
                   ? Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))
                   : Image.network(product.gambarUrl.first, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                           color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))),
             ),
           ),

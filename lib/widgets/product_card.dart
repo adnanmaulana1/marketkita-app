@@ -13,7 +13,7 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final favIds = <int>{};
+    final isFav = app.favoritIds.contains(product.id);
     return InkWell(
       onTap: () => Navigator.push(
         context,
@@ -38,7 +38,7 @@ class ProductCard extends StatelessWidget {
                       : Image.network(
                           product.gambarUrl.first,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             color: Colors.grey[200],
                             child: const Icon(Icons.image, color: Colors.grey, size: 40),
                           ),
@@ -57,25 +57,25 @@ class ProductCard extends StatelessWidget {
                       child: Text('-${product.diskonPersen}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                     ),
                   ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: InkWell(
-                    onTap: () async {
-                      if (!app.isLoggedIn) return;
-                      await app.favoritToggleApi(product.id);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: Icon(
-                        favIds.contains(product.id) ? Icons.favorite : Icons.favorite_border,
-                        size: 18,
-                        color: favIds.contains(product.id) ? Colors.red : Colors.grey,
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: InkWell(
+                      onTap: () async {
+                        if (!app.isLoggedIn) return;
+                        await app.toggleFavorite(product.id);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        child: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          size: 18,
+                          color: isFav ? Colors.red : Colors.grey,
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
             Padding(

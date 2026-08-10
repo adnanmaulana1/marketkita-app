@@ -6,6 +6,8 @@ import '../../services/api.dart';
 import '../../state/app_state.dart';
 import '../../widgets/product_card.dart';
 import '../cart_screen.dart';
+import '../chat_list_screen.dart';
+import '../orders_screen.dart';
 import '../profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -107,6 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: Badge(
+              isLabelVisible: app.chatUnread > 0,
+              label: Text('${app.chatUnread}'),
+              child: const Icon(Icons.chat_bubble_outline),
+            ),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen())),
+          ),
+          IconButton(
+            icon: Badge(
               isLabelVisible: cartCount > 0,
               label: Text('$cartCount'),
               child: const Icon(Icons.shopping_cart_outlined),
@@ -166,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Beranda'),
           NavigationDestination(icon: Icon(Icons.shopping_cart_outlined), selectedIcon: Icon(Icons.shopping_cart), label: 'Keranjang'),
@@ -177,6 +187,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _onTabSelected(int i) async {
+    setState(() => _tab = i);
+    switch (i) {
+      case 1:
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+      case 2:
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen()));
+      case 3:
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+      default:
+        return;
+    }
+    if (mounted) setState(() => _tab = 0);
+  }
+
   Widget _categoryRow() {
     if (_cats.isEmpty) return const SizedBox.shrink();
     return SizedBox(
@@ -185,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         scrollDirection: Axis.horizontal,
         itemCount: _cats.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           if (i == 0) {
             return _chip('Semua', '', Icons.apps);

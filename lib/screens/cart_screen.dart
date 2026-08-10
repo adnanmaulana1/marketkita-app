@@ -20,7 +20,7 @@ class CartScreen extends StatelessWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: cart.items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final item = cart.items[i];
                 return Container(
@@ -40,7 +40,7 @@ class CartScreen extends StatelessWidget {
                           child: item.gambar.isEmpty
                               ? Container(color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))
                               : Image.network(item.gambar, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorBuilder: (_, _, _) => Container(
                                       color: Colors.grey[200], child: const Icon(Icons.image, color: Colors.grey))),
                         ),
                       ),

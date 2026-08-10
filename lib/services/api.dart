@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import '../models/cart.dart';
+import '../models/chat.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 import '../models/user.dart';
@@ -12,32 +14,45 @@ import '../models/voucher.dart';
 
 class ApiException implements Exception {
   final String message;
-  ApiException(this.message);
+  final int? statusCode;
+  ApiException(this.message, {this.statusCode});
   @override
   String toString() => message;
 }
 
 class Api {
-  static const _prefsToken = 'auth_token';
+  static const _tokenKey = 'auth_token';
+  static const _legacyPrefsToken = 'auth_token';
+  static const _storage = FlutterSecureStorage();
   static String? _token;
 
   static String? get token => _token;
 
+  /// Memuat token dari penyimpanan aman (Android Keystore / iOS Keychain).
+  /// Melakukan migrasi sekali jalan dari SharedPreferences lama bila ada.
   static Future<void> init() async {
+    final t = await _storage.read(key: _tokenKey);
+    if (t != null && t.isNotEmpty) {
+      _token = t;
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString(_prefsToken);
+    final legacy = prefs.getString(_legacyPrefsToken);
+    if (legacy != null && legacy.isNotEmpty) {
+      _token = legacy;
+      await _storage.write(key: _tokenKey, value: legacy);
+      await prefs.remove(_legacyPrefsToken);
+    }
   }
 
   static Future<void> saveToken(String token) async {
     _token = token;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsToken, token);
+    await _storage.write(key: _tokenKey, value: token);
   }
 
   static Future<void> clearToken() async {
     _token = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_prefsToken);
+    await _storage.delete(key: _tokenKey);
   }
 
   static Uri _uri(String path, [Map<String, String>? query]) {
@@ -70,7 +85,7 @@ class Api {
     final data = _decode(res);
     if (res.statusCode >= 400) {
       final msg = (data is Map && data['msg'] != null) ? data['msg'].toString() : 'Terjadi kesalahan (${res.statusCode})';
-      throw ApiException(msg);
+      throw ApiException(msg, statusCode: res.statusCode);
     }
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
@@ -225,6 +240,8 @@ class Api {
     String shipping = 'ambil_toko',
     String pembayaran = 'cod',
     int voucherId = 0,
+    int pakaiSaldo = 0,
+    String bayarSisa = 'cod',
     double lat = 0,
     double lng = 0,
   }) async {
@@ -240,6 +257,8 @@ class Api {
       'shipping': shipping,
       'pembayaran': pembayaran,
       'voucher_id': '$voucherId',
+      'pakai_saldo': '$pakaiSaldo',
+      'bayar_sisa': bayarSisa,
       'lat': '$lat',
       'lng': '$lng',
     });
@@ -303,5 +322,42 @@ class Api {
     });
     final d = _check(res);
     return User.fromJson(d['user']);
+  }
+
+  // ===== CHAT =====
+  static Future<List<ChatUser>> chatUsers() async {
+    final res = await http.get(_uri('/api/chat/users'), headers: _headers());
+    final d = _check(res);
+    return (d['users'] as List).map((e) => ChatUser.fromJson(e)).toList();
+  }
+
+  static Future<int> chatCreateConversation(int peerId) async {
+    final res = await http.post(_uri('/api/chat/conversations'), headers: _headers(), body: {'peer_id': '$peerId'});
+    final d = _check(res);
+    return (d['conversation_id'] as num?)?.toInt() ?? 0;
+  }
+
+  static Future<List<Conversation>> chatConversations() async {
+    final res = await http.get(_uri('/api/chat/conversations'), headers: _headers());
+    final d = _check(res);
+    return (d['conversations'] as List).map((e) => Conversation.fromJson(e)).toList();
+  }
+
+  static Future<({int conversationId, ChatUser peer, List<ChatMessage> messages})> chatMessages(int convId) async {
+    final res = await http.get(_uri('/api/chat/messages', {'conv_id': '$convId'}), headers: _headers());
+    final d = _check(res);
+    return (
+      conversationId: (d['conversation_id'] as num?)?.toInt() ?? convId,
+      peer: ChatUser.fromJson((d['peer'] as Map?)?.cast<String, dynamic>() ?? {}),
+      messages: (d['messages'] as List).map((e) => ChatMessage.fromJson(e)).toList(),
+    );
+  }
+
+  static Future<void> chatMarkRead(int convId) async {
+    await http.post(_uri('/api/chat/read'), headers: _headers(), body: {'conv_id': '$convId'});
+  }
+
+  static Future<void> chatDeleteMessage(int messageId) async {
+    await http.post(_uri('/api/chat/messages/delete'), headers: _headers(), body: {'message_id': '$messageId'});
   }
 }

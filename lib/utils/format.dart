@@ -10,7 +10,9 @@ String formatDate(String? iso, {bool withTime = true}) {
   if (iso == null || iso.isEmpty) return '';
   try {
     final dt = DateTime.parse(iso).toLocal();
-    final fmt = withTime ? DateFormat('dd MMM yyyy, HH:mm') : DateFormat('dd MMM yyyy');
+    final fmt = withTime
+        ? DateFormat('dd MMM yyyy, HH:mm', 'id_ID')
+        : DateFormat('dd MMM yyyy', 'id_ID');
     return fmt.format(dt);
   } catch (_) {
     return iso;

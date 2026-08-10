@@ -130,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                     if (isKurir) ...[
                       DropdownButtonFormField<String>(
-                        value: _kendaraan.text.isEmpty ? 'motor' : _kendaraan.text,
+                        initialValue: _kendaraan.text.isEmpty ? 'motor' : _kendaraan.text,
                         decoration: const InputDecoration(labelText: 'Kendaraan', prefixIcon: Icon(Icons.two_wheeler_outlined), border: OutlineInputBorder()),
                         items: const [
                           DropdownMenuItem(value: 'motor', child: Text('Motor')),

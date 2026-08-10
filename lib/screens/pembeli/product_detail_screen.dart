@@ -5,6 +5,7 @@ import '../../models/product.dart';
 import '../../services/api.dart';
 import '../../state/app_state.dart';
 import '../../utils/format.dart';
+import 'checkout_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final int productId;
@@ -63,7 +64,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       Navigator.pushNamed(context, '/login');
       return;
     }
-    await _addToCart();
+    try {
+      await app.addToCart(_product!.id, qty: _qty, varian: _varian);
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen()));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   @override
@@ -92,7 +99,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         itemBuilder: (_, i) => Image.network(
                           p.gambarUrl[i],
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             color: Colors.grey[200],
                             child: const Icon(Icons.image, size: 64, color: Colors.grey),
                           ),
@@ -320,7 +327,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Text('$_qty', style: const TextStyle(fontWeight: FontWeight.w700)),
           IconButton(
             icon: const Icon(Icons.add, size: 16),
-            onPressed: () => setState(() => _qty++),
+            onPressed: _qty < (_product?.stok ?? 1) ? () => setState(() => _qty++) : null,
           ),
         ],
       ),

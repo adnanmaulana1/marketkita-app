@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../services/api.dart';
 import '../utils/format.dart';
+import 'kurir_tracking_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -53,7 +54,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: _orders!.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (_, i) => _OrderCard(order: _orders![i]),
                     ),
             ),
@@ -102,7 +103,7 @@ class _OrderCard extends StatelessWidget {
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: _statusColor(order.status).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: _statusColor(order.status).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                 child: Text(order.statusLabel, style: TextStyle(fontSize: 11, color: _statusColor(order.status), fontWeight: FontWeight.w700)),
               ),
             ],
@@ -134,6 +135,21 @@ class _OrderCard extends StatelessWidget {
               Text(rupiah(order.total), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
             ],
           ),
+          if (order.statusKurir == 'perjalanan' || order.statusKurir == 'diambil')
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => KurirTrackingScreen(order: order),
+                  )),
+                  icon: const Icon(Icons.near_me),
+                  label: const Text('Lacak Kurir'),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF171717), foregroundColor: Colors.white),
+                ),
+              ),
+            ),
         ],
       ),
     );

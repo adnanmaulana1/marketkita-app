@@ -5,6 +5,8 @@ import '../../models/order.dart';
 import '../../services/kurir_api.dart';
 import '../../state/app_state.dart';
 import '../../utils/format.dart';
+import '../chat_list_screen.dart';
+import 'kurir_map_screen.dart';
 
 class KurirHomeScreen extends StatefulWidget {
   const KurirHomeScreen({super.key});
@@ -23,6 +25,28 @@ class _KurirHomeScreenState extends State<KurirHomeScreen> {
   void initState() {
     super.initState();
     _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final app = context.read<AppState>();
+      app.connectRealtime();
+      app.onRealtime(_onRealtime);
+    });
+  }
+
+  @override
+  void dispose() {
+    final app = context.read<AppState>();
+    app.removeRealtimeListener(_onRealtime);
+    super.dispose();
+  }
+
+  void _onRealtime(Map<String, dynamic> data) {
+    if (data['type'] == 'kurir_order_baru' && mounted) {
+      _load();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Order baru tersedia: ${data['nomor']}'),
+        duration: const Duration(seconds: 3),
+      ));
+    }
   }
 
   Future<void> _load() async {
@@ -65,10 +89,19 @@ class _KurirHomeScreenState extends State<KurirHomeScreen> {
         title: const Text('Dashboard Kurir', style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
+            icon: Badge(
+              isLabelVisible: app.chatUnread > 0,
+              label: Text('${app.chatUnread}'),
+              child: const Icon(Icons.chat_bubble_outline),
+            ),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatListScreen())),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await app.logout();
-              if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/login', (r) => false);
+              if (!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (r) => false);
             },
           ),
         ],
@@ -94,6 +127,20 @@ class _KurirHomeScreenState extends State<KurirHomeScreen> {
                       _header(),
                       const SizedBox(height: 16),
                       _saldoCard(),
+                      if (_data!.saya.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => KurirMapScreen(activeOrders: _data!.saya),
+                            )),
+                            icon: const Icon(Icons.near_me),
+                            label: Text('Kirim Lokasi Live (${_data!.saya.length} order)'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade700, foregroundColor: Colors.white),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       if (_data!.saya.isNotEmpty) ...[
                         const Text('Tugas Aktif', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
@@ -268,7 +315,7 @@ class _OrderCard extends StatelessWidget {
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: kc.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: kc.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                 child: Text(order.statusKurir.toUpperCase(), style: TextStyle(fontSize: 11, color: kc, fontWeight: FontWeight.w700)),
               ),
             ],

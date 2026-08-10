@@ -1,17 +1,89 @@
-# marketkita_app
+# MarketKita App
 
-A new Flutter project.
+Aplikasi mobile MarketKita (Flutter) — pembeli, toko, dan kurir.
 
-## Getting Started
+## Persyaratan
 
-This project is a starting point for a Flutter application.
+- Flutter 3.44+ (stable)
+- Backend MarketKita harus dapat diakses via HTTPS
+  (base URL ada di `lib/config.dart`, saat ini `https://toko.adnanmaulana.my.id`).
 
-A few resources to get you started if this is your first Flutter project:
+## Menjalankan
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Konfigurasi & Keamanan
+
+- Semua trafik API **dan WebSocket** memakai TLS (`https://` / `wss://`).
+  Jangan kembalikan `AppConfig.baseUrl` ke `http://`.
+- Token JWT disimpan di **Android Keystore / iOS Keychain**
+  (`flutter_secure_storage`), bukan SharedPreferences.
+  Migrasi token lama dari SharedPreferences dilakukan otomatis sekali jalan.
+- `AndroidManifest.xml`: `android:usesCleartextTraffic="false"` dan
+  `android:allowBackup="false"` (mencegah ekstraksi data lewat `adb backup`).
+
+## Menandatangani APK Produksi
+
+Saat ini `android/app/build.gradle.kts` masih menandatangani build `release`
+dengan **debug key** (hanya untuk memudahkan `flutter run --release`).
+Jangan upload APK ini ke Play Store.
+
+Untuk produksi:
+
+1. Buat keystore (rahasia, simpan di tempat aman dan jangan di-commit):
+   ```bash
+   keytool -genkey -v -keystore ~/keys/marketkita.jks -alias marketkita \
+     -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+2. Buat file `android/key.properties` (jangan di-commit, sudah masuk `.gitignore`):
+   ```properties
+   storePassword=<password-store>
+   keyPassword=<password-key>
+   keyAlias=marketkita
+   storeFile=/absolute/path/ke/marketkita.jks
+   ```
+
+3. Di `android/app/build.gradle.kts`, tambahkan blok signing di `android {}`:
+   ```kotlin
+   import java.util.Properties
+   import java.io.FileInputStream
+
+   // di dalam blok `android { ... }` setelah `defaultConfig`:
+   signingConfigs {
+       create("release") {
+           val props = Properties().apply {
+               val f = rootProject.file("key.properties")
+               if (f.exists()) load(FileInputStream(f))
+           }
+           storeFile = props.getProperty("storeFile")?.let { file(it) }
+           storePassword = props.getProperty("storePassword")
+           keyAlias = props.getProperty("keyAlias")
+           keyPassword = props.getProperty("keyPassword")
+       }
+   }
+   ```
+   lalu ubah `buildTypes.release` menjadi:
+   ```kotlin
+   buildTypes {
+       release {
+           signingConfig = signingConfigs.getByName("release")
+           isMinifyEnabled = true
+           isShrinkResources = true
+       }
+   }
+   ```
+
+4. Build: `flutter build apk --release`.
+
+## Pengujian
+
+```bash
+flutter test
+```
+
+Unit test mencakup parsing model (`test/models_test.dart`) dan util format
+(`test/format_test.dart`).
