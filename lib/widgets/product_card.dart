@@ -53,9 +53,9 @@ class ProductCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.black,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text('-${product.diskonPersen}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                        child: Text('-${product.diskonPersen}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
                       ),
                     ),
                   Positioned(
@@ -63,7 +63,10 @@ class ProductCard extends StatelessWidget {
                     right: 6,
                     child: InkWell(
                       onTap: () async {
-                        if (!app.isLoggedIn) return;
+                        if (!app.isLoggedIn) {
+                          Navigator.pushNamed(context, '/login');
+                          return;
+                        }
                         final fav = await app.toggleFavorite(product.id);
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context)
@@ -102,21 +105,50 @@ class ProductCard extends StatelessWidget {
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, height: 1.2),
                   ),
                   const SizedBox(height: 6),
-                  if (product.toko.nama.isNotEmpty) ...[
-                    Text(product.toko.nama,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                  Text(rupiah(product.harga), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+                  if (product.hasDiskon) ...[
                     const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)),
+                          child: Text('${product.diskonPersen}%', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(rupiah(product.hargaCoret!),
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: Colors.grey[400], decoration: TextDecoration.lineThrough)),
+                        ),
+                      ],
+                    ),
                   ],
-                  Text(rupiah(product.harga), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
-                  if (product.hasDiskon)
-                    Text(rupiah(product.hargaCoret),
-                        style: TextStyle(fontSize: 11, color: Colors.grey[400], decoration: TextDecoration.lineThrough)),
+                  const SizedBox(height: 8),
+                  if (product.toko.nama.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(Icons.verified, size: 13, color: Colors.black),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(product.toko.nama,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                  if (product.toko.alamat != null && product.toko.alamat!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(product.toko.alamat!,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                  ],
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       const Icon(Icons.star, size: 13, color: Colors.amber),
                       const SizedBox(width: 2),
-                      Text('${product.rating}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                      Text('${product.rating}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text('(${product.terjual} terjual)',

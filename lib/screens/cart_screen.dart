@@ -8,6 +8,27 @@ import 'pembeli/checkout_screen.dart';
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
+  Future<void> _confirmRemove(BuildContext context, AppState app, int itemId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus item'),
+        content: const Text('Hapus item ini dari keranjang?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await app.removeCart(itemId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -50,13 +71,13 @@ class CartScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(item.nama, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                            if (item.varian.isNotEmpty) Text(item.varian, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                            if (item.tokoNama != null) Text(item.tokoNama!, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                            if (item.varian.isNotEmpty) Text(item.varian, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                            if (item.tokoNama != null) Text(item.tokoNama!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                             const SizedBox(height: 6),
+                            Text(rupiah(item.subtotal), style: const TextStyle(fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 8),
                             Row(
                               children: [
-                                Text(rupiah(item.subtotal), style: const TextStyle(fontWeight: FontWeight.w800)),
-                                const Spacer(),
                                 Container(
                                   decoration: BoxDecoration(
                                     border: Border.all(color: Colors.grey.shade300),
@@ -85,10 +106,11 @@ class CartScreen extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 4),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () => app.removeCart(item.id),
+                                const Spacer(),
+                                TextButton.icon(
+                                  onPressed: () => _confirmRemove(context, app, item.id),
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                                  label: const Text('Hapus', style: TextStyle(color: Colors.red, fontSize: 12)),
                                 ),
                               ],
                             ),

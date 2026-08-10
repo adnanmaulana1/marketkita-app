@@ -21,6 +21,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _qty = 1;
   String _varian = '';
   int _currentImage = 0;
+  bool _actionLoading = false;
 
   @override
   void initState() {
@@ -44,32 +45,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _addToCart() async {
+    if (_actionLoading) return;
     final app = context.read<AppState>();
     if (!app.isLoggedIn) {
       Navigator.pushNamed(context, '/login');
       return;
     }
+    setState(() => _actionLoading = true);
     try {
       await app.addToCart(_product!.id, qty: _qty, varian: _varian);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ditambahkan ke keranjang')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _actionLoading = false);
     }
   }
 
   Future<void> _buyNow() async {
+    if (_actionLoading) return;
     final app = context.read<AppState>();
     if (!app.isLoggedIn) {
       Navigator.pushNamed(context, '/login');
       return;
     }
+    setState(() => _actionLoading = true);
     try {
       await app.addToCart(_product!.id, qty: _qty, varian: _varian);
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen()));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) setState(() => _actionLoading = false);
     }
   }
 
@@ -137,18 +145,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.kategori.toUpperCase(), style: TextStyle(fontSize: 11, letterSpacing: 1.2, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                Text(p.kategori.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, letterSpacing: 1.2, color: Colors.grey[500], fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
-                Text(p.nama, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, height: 1.3)),
+                Text(p.nama, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, height: 1.3)),
                 const SizedBox(height: 10),
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 10,
+                  runSpacing: 6,
                   children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 18),
-                    const SizedBox(width: 4),
-                    Text('${p.rating}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(width: 6),
-                    Text('· ${p.terjual} terjual', style: TextStyle(color: Colors.grey[600])),
-                    const SizedBox(width: 10),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 18),
+                        const SizedBox(width: 4),
+                        Text('${p.rating}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 6),
+                        Text('· ${p.terjual} terjual', style: TextStyle(color: Colors.grey[600])),
+                      ],
+                    ),
                     if (p.stok > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -270,7 +285,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: p.stok > 0 ? _buyNow : null,
+                  onPressed: (p.stok > 0 && !_actionLoading) ? _buyNow : null,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -282,9 +297,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: p.stok > 0 ? _addToCart : null,
-                  icon: const Icon(Icons.add_shopping_cart),
-                  label: const Text('Tambah ke Keranjang'),
+                  onPressed: (p.stok > 0 && !_actionLoading) ? _addToCart : null,
+                  icon: _actionLoading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.add_shopping_cart),
+                  label: Text(_actionLoading ? 'Memuat...' : 'Tambah ke Keranjang'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF171717),
                     foregroundColor: Colors.white,

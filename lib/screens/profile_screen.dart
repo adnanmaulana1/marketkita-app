@@ -15,6 +15,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _topupLoading = false;
+  bool _editLoading = false;
+
   Future<void> _logout() async {
     final app = context.read<AppState>();
     await app.logout();
@@ -46,18 +49,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () async {
-                  final n = int.tryParse(ctl.text) ?? 0;
-                  if (n <= 0) {
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nominal tidak valid')));
-                    return;
-                  }
-                  await Api.topup(n);
-                  await app.refreshUser();
-                  if (mounted) Navigator.pop(context);
-                },
+                onPressed: _topupLoading
+                    ? null
+                    : () async {
+                        final n = int.tryParse(ctl.text) ?? 0;
+                        if (n <= 0) {
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nominal tidak valid')));
+                          return;
+                        }
+                        setState(() => _topupLoading = true);
+                        try {
+                          await Api.topup(n);
+                          await app.refreshUser();
+                          if (mounted) Navigator.pop(context);
+                        } catch (e) {
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                        } finally {
+                          if (mounted) setState(() => _topupLoading = false);
+                        }
+                      },
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF171717), foregroundColor: Colors.white),
-                child: const Text('Top-up'),
+                child: _topupLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Top-up'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showInfo(String title, String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditProfile() async {
+    final app = context.read<AppState>();
+    final u = app.user;
+    if (u == null) return;
+    final nama = TextEditingController(text: u.nama);
+    final telepon = TextEditingController(text: u.telepon);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Edit Profil', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 12),
+              TextField(controller: nama, decoration: const InputDecoration(labelText: 'Nama', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              TextField(controller: telepon, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telepon', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _editLoading
+                    ? null
+                    : () async {
+                        setState(() => _editLoading = true);
+                        try {
+                          await Api.updateProfil(nama: nama.text.trim(), telepon: telepon.text.trim());
+                          await app.refreshUser();
+                          if (mounted) Navigator.pop(context);
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                          }
+                        } finally {
+                          if (mounted) setState(() => _editLoading = false);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF171717), foregroundColor: Colors.white),
+                child: _editLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Simpan'),
               ),
             ],
           ),
@@ -143,6 +222,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: const Text('Voucher Saya'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VoucherScreen())),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    tileColor: Colors.white,
+                    leading: const Icon(Icons.person_outline),
+                    title: const Text('Edit Profil'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showEditProfile(),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    tileColor: Colors.white,
+                    leading: const Icon(Icons.location_on_outlined),
+                    title: const Text('Alamat Saya'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showInfo('Alamat', 'Fitur alamat tersimpan akan hadir di pembaruan berikutnya.'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    tileColor: Colors.white,
+                    leading: const Icon(Icons.help_outline),
+                    title: const Text('Bantuan'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showInfo('Bantuan', 'Butuh bantuan? Hubungi admin MarketKita melalui menu Pesan.'),
                   ),
                   const Divider(height: 1),
                   ListTile(

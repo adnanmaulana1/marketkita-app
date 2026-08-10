@@ -20,11 +20,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
   String _role = 'pembeli';
   bool _obscure = true;
+  bool _loading = false;
   String? _error;
 
   Future<void> _submit() async {
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _error = null);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     final app = context.read<AppState>();
     try {
       await app.register(
@@ -39,6 +44,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _error = e.message);
     } catch (_) {
       setState(() => _error = 'Terjadi kesalahan. Periksa koneksi ke server.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -133,14 +140,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: _submit,
+                      onPressed: _loading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF171717),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: const Text('Daftar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      child: _loading
+                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Daftar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(height: 12),
                     TextButton(

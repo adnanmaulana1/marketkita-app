@@ -293,6 +293,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _row('Subtotal', rupiah(subtotal)),
             _row('Ongkir', _shipping == 'ambil_toko' ? 'Gratis' : 'Dihitung otomatis'),
             if (_selectedVoucher != null) _row('Diskon voucher', '-${rupiah(_estDiskon)}'),
+            const Divider(height: 20),
+            _row('Total yang dibayar', rupiah(subtotal - _estDiskon), emphasized: true),
           ]),
         ],
       ),
@@ -333,12 +335,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _row(String k, String v) {
+  Widget _row(String k, String v, {bool emphasized = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [Text(k, style: TextStyle(color: Colors.grey[600])), Text(v, style: const TextStyle(fontWeight: FontWeight.w700))],
+        children: [
+          Text(k, style: TextStyle(color: Colors.grey[600], fontWeight: emphasized ? FontWeight.w800 : null)),
+          Text(v, style: TextStyle(fontWeight: FontWeight.w700, fontSize: emphasized ? 18 : null)),
+        ],
       ),
     );
   }

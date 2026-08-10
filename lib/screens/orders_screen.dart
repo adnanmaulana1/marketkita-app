@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/order.dart';
 import '../services/api.dart';
+import '../state/app_state.dart';
 import '../utils/format.dart';
 import 'kurir_tracking_screen.dart';
 
@@ -62,9 +64,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 }
 
-class _OrderCard extends StatelessWidget {
+class _OrderCard extends StatefulWidget {
   final Order order;
   const _OrderCard({required this.order});
+
+  @override
+  State<_OrderCard> createState() => _OrderCardState();
+}
+
+class _OrderCardState extends State<_OrderCard> {
+  bool _reordering = false;
+
+  Order get order => widget.order;
 
   Color _statusColor(String s) {
     switch (s) {
@@ -83,8 +94,28 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
+  Future<void> _beliLagi() async {
+    if (_reordering) return;
+    setState(() => _reordering = true);
+    try {
+      final app = context.read<AppState>();
+      for (final item in order.items) {
+        await app.addToCart(item.productId, qty: item.qty, varian: item.varian);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua item ditambahkan ke keranjang'), behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _reordering = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final firstItem = order.items.isNotEmpty ? order.items.first : null;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -97,9 +128,11 @@ class _OrderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(order.nomor, style: const TextStyle(fontWeight: FontWeight.w800)),
-              const SizedBox(width: 8),
-              Text(formatDate(order.createdAt), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+              const Icon(Icons.shopping_bag_outlined, size: 16),
+              const SizedBox(width: 6),
+              Text('Belanja', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 4),
+              Text('• ${formatDate(order.createdAt)}', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -112,44 +145,75 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Kurir: ${order.statusKurir.toUpperCase()}', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           ],
-          const Divider(height: 20),
-          for (final item in order.items)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  Expanded(child: Text(item.nama, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
-                  Text('${item.qty}x', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                  const SizedBox(width: 8),
-                  Text(rupiah(item.harga * item.qty), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                ],
-              ),
+          const Divider(height: 18),
+          if (firstItem != null) ...[
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.shopping_bag, color: Colors.grey, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(firstItem.nama, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 3),
+                      Text('${firstItem.qty} barang x ${rupiah(firstItem.harga)}',
+                          style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      if (order.items.length > 1) ...[
+                        const SizedBox(height: 2),
+                        Text('+${order.items.length - 1} item lainnya', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
-          const Divider(height: 20),
+          ],
+          const Divider(height: 18),
           Row(
             children: [
-              if (order.storeNama != null)
-                Expanded(child: Text('${order.storeNama}', style: TextStyle(fontSize: 12, color: Colors.grey[600]))),
-              const Spacer(),
-              Text('Total: ', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              Text(rupiah(order.total), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+              Expanded(
+                child: Text('Total Belanja', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              ),
+              Text(rupiah(order.total), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
             ],
           ),
-          if (order.statusKurir == 'perjalanan' || order.statusKurir == 'diambil')
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => KurirTrackingScreen(order: order),
-                  )),
-                  icon: const Icon(Icons.near_me),
-                  label: const Text('Lacak Kurir'),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF171717), foregroundColor: Colors.white),
+          if (order.statusKurir == 'perjalanan' || order.statusKurir == 'diambil') ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => KurirTrackingScreen(order: order),
+                )),
+                icon: const Icon(Icons.near_me),
+                label: const Text('Lacak Kurir'),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF171717), foregroundColor: Colors.white),
+              ),
+            ),
+          ],
+          if (order.status != 'batal' && order.items.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _reordering ? null : _beliLagi,
+                icon: _reordering
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.replay),
+                label: Text(_reordering ? 'Menambahkan...' : 'Beli Lagi'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF171717),
+                  side: const BorderSide(color: Colors.black),                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
